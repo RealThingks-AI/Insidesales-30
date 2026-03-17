@@ -1640,6 +1640,10 @@ export type Database = {
       archive_completed_action_items: { Args: never; Returns: number }
       can_manage_campaign: { Args: { _campaign_id: string }; Returns: boolean }
       can_view_campaign: { Args: { _campaign_id: string }; Returns: boolean }
+      cleanup_campaign_action_items_on_delete: {
+        Args: { _campaign_id: string }
+        Returns: undefined
+      }
       get_user_role: { Args: { p_user_id: string }; Returns: string }
       is_current_user_admin: { Args: never; Returns: boolean }
       is_user_admin: { Args: { user_id?: string }; Returns: boolean }
