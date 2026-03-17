@@ -22,7 +22,7 @@ export const OfferedStageForm = ({ formData, onFieldChange, fieldErrors }: Offer
         </p>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {requiredFields.map(field => (
             <FormFieldRenderer
               key={field}

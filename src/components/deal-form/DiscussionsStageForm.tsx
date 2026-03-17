@@ -18,7 +18,7 @@ export const DiscussionsStageForm = ({ formData, onFieldChange, fieldErrors }: D
         <CardTitle className="text-lg">Discussions Stage</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {fields.map(field => (
             <FormFieldRenderer
               key={field}

@@ -18,7 +18,7 @@ export const QualifiedStageForm = ({ formData, onFieldChange, fieldErrors }: Qua
         <CardTitle className="text-lg">Qualified Stage</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {fields.map(field => (
             <FormFieldRenderer
               key={field}

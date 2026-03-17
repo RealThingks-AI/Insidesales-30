@@ -89,8 +89,6 @@ export const createDuplicateChecker = (tableName: string) => {
         ? ['email', 'contact_name'] 
         : tableName === 'leads'
         ? ['email', 'lead_name']
-        : tableName === 'meetings'
-        ? ['title', 'start_time']
         : ['deal_name'];
 
       // Build query dynamically

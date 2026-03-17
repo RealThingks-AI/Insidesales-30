@@ -78,15 +78,6 @@ const Auth = () => {
       // Add small delay for Safari to process cleanup
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Attempt global sign out to clear any existing session
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-        // Another small delay for Safari
-        await new Promise(resolve => setTimeout(resolve, 100));
-      } catch (err) {
-        console.warn('Pre-login signout failed:', err);
-      }
-
       // Safari-specific login with extended timeout
       const { data, error } = await Promise.race([
         supabase.auth.signInWithPassword({
@@ -109,16 +100,11 @@ const Auth = () => {
       }
 
       if (data.user && data.session) {
-        console.log('Login successful for Safari');
         toast({
           title: "Success",
           description: "Logged in successfully!",
         });
-        
-        // Safari-compatible redirect with delay
-        setTimeout(() => {
-          window.location.replace("/");
-        }, 500);
+        // AuthRoute will handle redirect via React Router
       } else {
         throw new Error('No user data received');
       }
@@ -145,11 +131,13 @@ const Auth = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted">
       <Card className="w-full max-w-md shadow-2xl border-0">
-        <CardHeader className="text-center space-y-2">
+        <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
             RealThingks CRM
           </CardTitle>
-          <p className="text-sm text-foreground/70">Sign in to your account</p>
+          <CardDescription className="text-base mt-2">
+            Sign in to your account
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignIn} className="space-y-4">
@@ -166,7 +154,41 @@ const Auth = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <button
+                  type="button"
+                  className="text-xs text-primary hover:underline"
+                  onClick={async () => {
+                    if (!email.trim()) {
+                      toast({
+                        title: "Email required",
+                        description: "Please enter your email address first.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    try {
+                      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+                        redirectTo: window.location.origin + '/auth',
+                      });
+                      if (error) throw error;
+                      toast({
+                        title: "Password reset email sent",
+                        description: "Check your email for a password reset link.",
+                      });
+                    } catch (error: any) {
+                      toast({
+                        title: "Error",
+                        description: error.message || "Failed to send reset email.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                >
+                  Forgot password?
+                </button>
+              </div>
               <Input
                 id="password"
                 type="password"
@@ -179,7 +201,7 @@ const Auth = () => {
             </div>
             <Button 
               type="submit" 
-              className="w-full bg-primary/90 hover:bg-primary text-primary-foreground text-lg py-3" 
+              className="w-full btn-primary text-lg py-3" 
               disabled={loading}
             >
               {loading ? "Signing in..." : "Sign In"}

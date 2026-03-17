@@ -48,7 +48,7 @@ export const RFQStageForm = ({ formData, onFieldChange, fieldErrors }: RFQStageF
         <CardTitle className="text-lg">RFQ Stage</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {fields.map(field => (
             <FormFieldRenderer
               key={field}

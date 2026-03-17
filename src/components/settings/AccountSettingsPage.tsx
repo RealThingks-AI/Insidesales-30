@@ -5,13 +5,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useThemePreferences } from '@/hooks/useThemePreferences';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, User, Shield, Bell, Settings2 } from 'lucide-react';
+import { Loader2, User, Shield, Bell } from 'lucide-react';
 import ProfileSection from './account/ProfileSection';
 import SecuritySection from './account/SecuritySection';
 import NotificationsSection from './account/NotificationsSection';
-import DisplayPreferencesSection from './account/DisplayPreferencesSection';
-import PasswordChangeModal from './PasswordChangeModal';
-import { TerminateSessionDialog, TerminateAllSessionsDialog } from './SessionDialogs';
 
 interface ProfileData {
   full_name: string;
@@ -30,10 +27,11 @@ interface NotificationPrefs {
   task_reminders: boolean;
   meeting_reminders: boolean;
   weekly_digest: boolean;
-  notification_frequency: 'instant' | 'daily' | 'weekly';
+  notification_frequency: string;
   leads_notifications: boolean;
   contacts_notifications: boolean;
   accounts_notifications: boolean;
+  daily_reminder_time: string;
 }
 
 interface DisplayPrefs {
@@ -43,33 +41,12 @@ interface DisplayPrefs {
   default_module: string;
 }
 
-interface Session {
-  id: string;
-  session_token: string;
-  ip_address: string | null;
-  user_agent: string | null;
-  device_info: {
-    browser?: string;
-    os?: string;
-    device?: string;
-  } | null;
-  last_active_at: string;
-  created_at: string;
-  is_active: boolean;
-}
-
 const AccountSettingsPage = () => {
   const { user } = useAuth();
   const { theme, setTheme } = useThemePreferences();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [currentSessionToken, setCurrentSessionToken] = useState<string | null>(null);
-  const [loadingSessions, setLoadingSessions] = useState(true);
-  const [terminatingSession, setTerminatingSession] = useState<string | null>(null);
-  const [showTerminateAllDialog, setShowTerminateAllDialog] = useState(false);
 
   const initialDataRef = useRef<{
     profile: ProfileData;
@@ -97,7 +74,8 @@ const AccountSettingsPage = () => {
     notification_frequency: 'instant',
     leads_notifications: true,
     contacts_notifications: true,
-    accounts_notifications: true
+    accounts_notifications: true,
+    daily_reminder_time: '07:00'
   });
 
   const [displayPrefs, setDisplayPrefs] = useState<DisplayPrefs>({
@@ -109,13 +87,9 @@ const AccountSettingsPage = () => {
 
   const hasUnsavedChanges = useCallback(() => {
     if (!initialDataRef.current) return false;
-    const { profile: initProfile, notificationPrefs: initNotif, displayPrefs: initDisplay } = initialDataRef.current;
-    return (
-      JSON.stringify(profile) !== JSON.stringify(initProfile) ||
-      JSON.stringify(notificationPrefs) !== JSON.stringify(initNotif) ||
-      JSON.stringify(displayPrefs) !== JSON.stringify(initDisplay)
-    );
-  }, [profile, notificationPrefs, displayPrefs]);
+    const { profile: initProfile } = initialDataRef.current;
+    return JSON.stringify(profile) !== JSON.stringify(initProfile);
+  }, [profile]);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -131,16 +105,8 @@ const AccountSettingsPage = () => {
   useEffect(() => {
     if (user) {
       fetchAllData();
-      fetchCurrentSessionToken();
     }
   }, [user]);
-
-  const fetchCurrentSessionToken = async () => {
-    const { data } = await supabase.auth.getSession();
-    if (data.session?.access_token) {
-      setCurrentSessionToken(data.session.access_token.substring(0, 20));
-    }
-  };
 
   const fetchAllData = async () => {
     if (!user) return;
@@ -152,8 +118,14 @@ const AccountSettingsPage = () => {
         .eq('id', user.id)
         .single();
 
+      // Prefer auth display name if profile full_name looks like an email
+      const profileName = profileData?.full_name;
+      const authName = user.user_metadata?.full_name;
+      const isEmailLikeName = profileName && profileName.includes('@');
+      const resolvedName = (isEmailLikeName ? authName : profileName) || authName || '';
+
       const loadedProfile: ProfileData = {
-        full_name: profileData?.full_name || user.user_metadata?.full_name || '',
+        full_name: resolvedName,
         email: profileData?.['Email ID'] || user.email || '',
         phone: profileData?.phone || '',
         timezone: profileData?.timezone || 'Asia/Kolkata',
@@ -176,10 +148,11 @@ const AccountSettingsPage = () => {
         task_reminders: notifData?.task_reminders ?? true,
         meeting_reminders: notifData?.meeting_reminders ?? true,
         weekly_digest: notifData?.weekly_digest ?? false,
-        notification_frequency: (notifData?.notification_frequency as 'instant' | 'daily' | 'weekly') ?? 'instant',
+        notification_frequency: notifData?.notification_frequency ?? 'instant',
         leads_notifications: notifData?.leads_notifications ?? true,
         contacts_notifications: notifData?.contacts_notifications ?? true,
-        accounts_notifications: notifData?.accounts_notifications ?? true
+        accounts_notifications: notifData?.accounts_notifications ?? true,
+        daily_reminder_time: (notifData as any)?.daily_reminder_time ?? '07:00'
       };
       setNotificationPrefs(loadedNotifPrefs);
 
@@ -202,8 +175,6 @@ const AccountSettingsPage = () => {
         notificationPrefs: loadedNotifPrefs,
         displayPrefs: loadedDisplayPrefs
       };
-
-      await fetchSessions();
     } catch (error) {
       console.error('Error fetching settings:', error);
     } finally {
@@ -211,31 +182,7 @@ const AccountSettingsPage = () => {
     }
   };
 
-  const fetchSessions = async () => {
-    if (!user) return;
-    setLoadingSessions(true);
-    try {
-      const { data, error } = await supabase
-        .from('user_sessions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .order('last_active_at', { ascending: false });
-
-      if (error) throw error;
-      setSessions((data || []).map(s => ({
-        ...s,
-        ip_address: s.ip_address as string | null,
-        device_info: s.device_info as Session['device_info']
-      })));
-    } catch (error) {
-      console.error('Error fetching sessions:', error);
-    } finally {
-      setLoadingSessions(false);
-    }
-  };
-
-  const handleSaveAll = async () => {
+  const handleSaveProfile = async () => {
     if (!user) return;
     setSaving(true);
     try {
@@ -249,63 +196,15 @@ const AccountSettingsPage = () => {
         updated_at: new Date().toISOString()
       });
 
-      await supabase.from('notification_preferences').upsert({
-        user_id: user.id,
-        ...notificationPrefs,
-        updated_at: new Date().toISOString()
-      });
-
-      await supabase.from('user_preferences').upsert({
-        user_id: user.id,
-        theme,
-        ...displayPrefs,
-        updated_at: new Date().toISOString()
-      });
-
-      initialDataRef.current = { profile, notificationPrefs, displayPrefs };
-      toast.success('All settings saved successfully');
+      if (initialDataRef.current) {
+        initialDataRef.current.profile = { ...profile };
+      }
+      toast.success('Profile saved successfully');
     } catch (error) {
-      console.error('Error saving settings:', error);
-      toast.error('Failed to save settings');
+      console.error('Error saving profile:', error);
+      toast.error('Failed to save profile');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const terminateSession = async (sessionId: string) => {
-    try {
-      const { error } = await supabase
-        .from('user_sessions')
-        .update({ is_active: false })
-        .eq('id', sessionId);
-
-      if (error) throw error;
-      toast.success('Session terminated');
-      fetchSessions();
-    } catch (error) {
-      toast.error('Failed to terminate session');
-    } finally {
-      setTerminatingSession(null);
-    }
-  };
-
-  const terminateAllOtherSessions = async () => {
-    if (!user) return;
-    try {
-      const currentSession = sessions.find(s => s.session_token?.substring(0, 20) === currentSessionToken);
-      const { error } = await supabase
-        .from('user_sessions')
-        .update({ is_active: false })
-        .eq('user_id', user.id)
-        .neq('id', currentSession?.id || '');
-
-      if (error) throw error;
-      toast.success('All other sessions terminated');
-      fetchSessions();
-    } catch (error) {
-      toast.error('Failed to terminate sessions');
-    } finally {
-      setShowTerminateAllDialog(false);
     }
   };
 
@@ -318,96 +217,58 @@ const AccountSettingsPage = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl pb-6">
-      {/* Unsaved Changes Indicator */}
-      {hasUnsavedChanges() && (
-        <div className="sticky top-0 z-10 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 flex items-center justify-between shadow-sm">
-          <p className="text-sm text-amber-800 dark:text-amber-200">You have unsaved changes</p>
-          <Button size="sm" onClick={handleSaveAll} disabled={saving}>
-            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save Now'}
-          </Button>
-        </div>
-      )}
-
+    <div className="space-y-6 w-full pb-6">
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 max-w-lg">
-          <TabsTrigger value="profile" className="flex items-center gap-2">
+        <div className="sticky top-0 z-10 bg-background pb-2 border-b border-border">
+          <TabsList className="grid w-full grid-cols-3 max-w-md">
+          <TabsTrigger value="profile" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <User className="h-4 w-4" />
-            <span className="sr-only sm:not-sr-only">Profile</span>
+            <span className="hidden sm:inline">Profile</span>
           </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2">
+          <TabsTrigger value="security" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <Shield className="h-4 w-4" />
-            <span className="sr-only sm:not-sr-only">Security</span>
+            <span className="hidden sm:inline">Security</span>
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
+          <TabsTrigger value="notifications" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <Bell className="h-4 w-4" />
-            <span className="sr-only sm:not-sr-only">Notifications</span>
+            <span className="hidden sm:inline">Notifications</span>
           </TabsTrigger>
-          <TabsTrigger value="display" className="flex items-center gap-2">
-            <Settings2 className="h-4 w-4" />
-            <span className="sr-only sm:not-sr-only">Display</span>
-          </TabsTrigger>
-        </TabsList>
+          </TabsList>
+        </div>
 
-        <TabsContent value="profile" className="mt-6">
-          <ProfileSection profile={profile} setProfile={setProfile} userId={user?.id} />
+        <TabsContent value="profile" className="mt-6 space-y-4">
+          <ProfileSection 
+            profile={profile} 
+            setProfile={setProfile} 
+            userId={user?.id || ''}
+            displayPrefs={displayPrefs}
+            setDisplayPrefs={setDisplayPrefs}
+            theme={theme}
+            setTheme={setTheme}
+          />
+          {hasUnsavedChanges() && (
+            <div className="flex justify-end">
+              <Button onClick={handleSaveProfile} disabled={saving}>
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Profile
+              </Button>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="security" className="mt-6">
-          <SecuritySection
-            sessions={sessions}
-            loadingSessions={loadingSessions}
-            currentSessionToken={currentSessionToken}
-            onShowPasswordModal={() => setShowPasswordModal(true)}
-            onRefreshSessions={fetchSessions}
-            onTerminateSession={id => setTerminatingSession(id)}
-            onTerminateAllOthers={() => setShowTerminateAllDialog(true)}
-          />
+          <SecuritySection userId={user?.id || ''} />
         </TabsContent>
 
         <TabsContent value="notifications" className="mt-6">
           <NotificationsSection
             notificationPrefs={notificationPrefs}
             setNotificationPrefs={setNotificationPrefs}
-          />
-        </TabsContent>
-
-        <TabsContent value="display" className="mt-6">
-          <DisplayPreferencesSection
-            displayPrefs={displayPrefs}
-            setDisplayPrefs={setDisplayPrefs}
-            theme={theme}
-            setTheme={setTheme}
+            userId={user?.id || ''}
+            userTimezone={profile.timezone}
           />
         </TabsContent>
       </Tabs>
-
-      {/* Save All Button */}
-      <div className="flex justify-end pt-4 border-t">
-        <Button onClick={handleSaveAll} disabled={saving} size="lg">
-          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Save All Changes
-        </Button>
-      </div>
-
-      {/* Modals */}
-      <PasswordChangeModal
-        open={showPasswordModal}
-        onOpenChange={setShowPasswordModal}
-        userId={user?.id}
-      />
-
-      <TerminateSessionDialog
-        open={!!terminatingSession}
-        onOpenChange={() => setTerminatingSession(null)}
-        onConfirm={() => terminatingSession && terminateSession(terminatingSession)}
-      />
-
-      <TerminateAllSessionsDialog
-        open={showTerminateAllDialog}
-        onOpenChange={setShowTerminateAllDialog}
-        onConfirm={terminateAllOtherSessions}
-      />
     </div>
   );
 };

@@ -113,35 +113,6 @@ export const createValueValidator = (tableName: string) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(value) ? value : null;
       
-      // Time fields for meetings
-      case 'start_time':
-      case 'end_time':
-        if (tableName === 'meetings') {
-          const date = new Date(value);
-          return isNaN(date.getTime()) ? null : date.toISOString();
-        }
-        return value.trim();
-      
-      case 'participants':
-        // Handle comma-separated email list
-        if (tableName === 'meetings') {
-          return value.split(',').map(email => email.trim()).filter(email => email);
-        }
-        return value.trim();
-        
-      case 'tags':
-        // Handle comma-separated tags list
-        if (tableName === 'meetings') {
-          return value.split(',').map(tag => tag.trim()).filter(tag => tag);
-        }
-        return value.trim();
-        
-      case 'follow_up_required':
-        if (tableName === 'meetings') {
-          return ['yes', 'true', '1', 'on'].includes(value.toLowerCase());
-        }
-        return value.trim();
-      
       default:
         return value.trim();
     }
