@@ -546,6 +546,8 @@ export type Database = {
       }
       campaigns: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           campaign_name: string
           campaign_type: string | null
           country: string | null
@@ -553,10 +555,12 @@ export type Database = {
           created_by: string
           description: string | null
           end_date: string | null
+          goal: string | null
           id: string
           message_strategy: string | null
           modified_at: string | null
           modified_by: string | null
+          notes: string | null
           owner: string | null
           region: string | null
           start_date: string | null
@@ -564,6 +568,8 @@ export type Database = {
           target_audience: string | null
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           campaign_name: string
           campaign_type?: string | null
           country?: string | null
@@ -571,10 +577,12 @@ export type Database = {
           created_by: string
           description?: string | null
           end_date?: string | null
+          goal?: string | null
           id?: string
           message_strategy?: string | null
           modified_at?: string | null
           modified_by?: string | null
+          notes?: string | null
           owner?: string | null
           region?: string | null
           start_date?: string | null
@@ -582,6 +590,8 @@ export type Database = {
           target_audience?: string | null
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           campaign_name?: string
           campaign_type?: string | null
           country?: string | null
@@ -589,10 +599,12 @@ export type Database = {
           created_by?: string
           description?: string | null
           end_date?: string | null
+          goal?: string | null
           id?: string
           message_strategy?: string | null
           modified_at?: string | null
           modified_by?: string | null
+          notes?: string | null
           owner?: string | null
           region?: string | null
           start_date?: string | null
@@ -859,6 +871,7 @@ export type Database = {
           rfq_received_date: string | null
           rfq_status: string | null
           signed_contract_date: string | null
+          source_campaign_contact_id: string | null
           stage: string
           start_date: string | null
           total_contract_value: number | null
@@ -913,6 +926,7 @@ export type Database = {
           rfq_received_date?: string | null
           rfq_status?: string | null
           signed_contract_date?: string | null
+          source_campaign_contact_id?: string | null
           stage?: string
           start_date?: string | null
           total_contract_value?: number | null
@@ -967,6 +981,7 @@ export type Database = {
           rfq_received_date?: string | null
           rfq_status?: string | null
           signed_contract_date?: string | null
+          source_campaign_contact_id?: string | null
           stage?: string
           start_date?: string | null
           total_contract_value?: number | null
@@ -986,6 +1001,13 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_source_campaign_contact_id_fkey"
+            columns: ["source_campaign_contact_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_contacts"
             referencedColumns: ["id"]
           },
         ]
@@ -1616,6 +1638,8 @@ export type Database = {
     }
     Functions: {
       archive_completed_action_items: { Args: never; Returns: number }
+      can_manage_campaign: { Args: { _campaign_id: string }; Returns: boolean }
+      can_view_campaign: { Args: { _campaign_id: string }; Returns: boolean }
       get_user_role: { Args: { p_user_id: string }; Returns: string }
       is_current_user_admin: { Args: never; Returns: boolean }
       is_user_admin: { Args: { user_id?: string }; Returns: boolean }
