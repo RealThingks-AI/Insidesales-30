@@ -240,7 +240,6 @@ export default function ActionItems() {
       ids: selectedIds,
       status: 'Completed'
     });
-    logBulkUpdate('action_items', selectedIds.length, { status: 'Completed' });
     setSelectedIds([]);
   };
   const handleBulkDelete = async () => {
