@@ -16,7 +16,7 @@ import { ActionItemModal } from '@/components/ActionItemModal';
 import { useAllUsers } from '@/hooks/useUserDisplayNames';
 import { useActionItemColumnPreferences } from '@/hooks/useActionItemColumnPreferences';
 import { Badge } from '@/components/ui/badge';
-import { useCRUDAudit } from '@/hooks/useCRUDAudit';
+
 type ViewMode = 'list' | 'kanban' | 'calendar';
 export default function ActionItems() {
   const {
