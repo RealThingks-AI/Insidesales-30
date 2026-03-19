@@ -302,6 +302,11 @@ const AuditLogsSettings = () => {
         byModule={stats.byModule}
         byUser={stats.byUser}
         userNames={userNames}
+        activeFilter={activeStatsFilter}
+        onFilterAll={handleFilterAll}
+        onFilterToday={handleFilterToday}
+        onFilterThisWeek={handleFilterThisWeek}
+        onFilterModule={handleFilterModule}
       />
 
       {/* Main Log Table */}
