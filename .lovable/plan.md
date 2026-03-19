@@ -1,71 +1,59 @@
-# CRM QA Fix Plan — Status
 
-## ✅ All Planned Fixes Completed
 
-### Critical
-| # | Issue | Status |
-|---|-------|--------|
-| 1 | XSS in TemplatePreviewModal — added DOMPurify sanitization | ✅ Done |
-| 2 | Dashboard data visibility — admins see all records, users see own | ✅ Done |
-| 3 | Account selector in DealForm — account_id now set via AccountSearchableDropdown | ✅ Done |
-| 4 | Audit log restricted to admin users only in dashboard | ✅ Done |
-| 5 | Deal Form `modified_by` uses current user ID instead of creator | ✅ Done |
-| 6 | Contacts bulk delete cleans up deal_stakeholders, campaign_contacts, deals stakeholder FKs | ✅ Done |
+## Campaign Audit Remediation: Action Item Logging + Audit Log UX Fixes
 
-### High
-| # | Issue | Status |
-|---|-------|--------|
-| 7 | Re-added module_type filter to Action Items page | ✅ Done |
-| 8 | Added source + region filters to Contacts page | ✅ Done |
-| 9 | Email Analytics now paginates past 1000-row Supabase limit | ✅ Done |
-| 10 | Renamed all Task/Tasks to Action Items across UI | ✅ Done |
-| 11 | Account status mismatch — aligned filter and dashboard to New/Working/Qualified/Inactive | ✅ Done |
-| 12 | Dashboard queries now paginate past 1000-row Supabase limit | ✅ Done |
+### Problem Analysis
 
-### Medium
-| # | Issue | Status |
-|---|-------|--------|
-| 13 | Notification separator only shows when Mark as read is visible | ✅ Done |
-| 14 | Bulk account delete now cleans up related deals + campaign_accounts | ✅ Done |
-| 15 | Added Forgot Password flow to Auth page | ✅ Done |
-| 16 | Campaign delete already cleans up email_templates and phone_scripts (verified) | ✅ Done |
-| 17 | Clear All notifications now requires confirmation dialog | ✅ Done |
+**Bug 1 — "Completed action items not in logs"**: Investigation shows logs ARE being created in the database. The real issue is **double-logging** — both `useActionItems.tsx` (hook-level `onSuccess`) and `ActionItems.tsx` (page-level `handleStatusChange`) independently call `logUpdate`, creating duplicate audit entries. Some completions may also appear missing if the user completed items from a Deal or Contact view (where `useCRUDAudit` might not be wired). The double-logging also inflates stats.
 
-### Low
-| # | Issue | Status |
-|---|-------|--------|
-| 18 | Removed console.log from UserManagement | ✅ Done |
-| 19 | Fixed Settings h-screen double scroll issue | ✅ Done |
-| 20 | Added ErrorBoundary around lazy-loaded Settings pages | ✅ Done |
-| 21 | Fixed error type assertion in DealForm catch blocks | ✅ Done |
+**Bug 2 — Stats badges not clickable**: `AuditLogStats` renders `Total`, `Today`, `This Week`, and module badges as plain display badges with no `onClick` handlers. They should act as quick filters.
+
+**Bug 3 — Summary text truncation**: The Summary `TableCell` uses the `truncate` CSS class, which clips long text with ellipsis. Text should wrap instead.
 
 ---
 
-## ✅ Campaign Module Deep Audit — All Fixes Completed
+### Plan
 
-### Critical
-| # | Issue | Status |
-|---|-------|--------|
-| C1 | Edge Function `send-campaign-email` used invalid `getClaims()` — replaced with `getUser()` | ✅ Done |
-| C2 | Edge Function not configured in `config.toml` — added `verify_jwt = false` | ✅ Done |
+#### 1. Fix double-logging of action item updates
 
-### High
-| # | Issue | Status |
-|---|-------|--------|
-| C3 | Campaign delete did not nullify `deals.campaign_id` — added cleanup | ✅ Done |
-| C4 | Campaign delete did not delete linked `action_items` — added cleanup | ✅ Done |
+**Files**: `src/pages/ActionItems.tsx`
 
-### Medium
-| # | Issue | Status |
-|---|-------|--------|
-| C5 | Outreach tab empty string Select values — replaced with "none" sentinel | ✅ Done |
-| C6 | Action Items tab missing "Assigned To" column — added with display names | ✅ Done |
+Remove the redundant `logUpdate`, `logCreate`, `logDelete`, `logBulkUpdate`, `logBulkDelete` calls from the page-level handlers since `useActionItems.tsx` already logs all CRUD operations in its mutation `onSuccess` callbacks. Remove the `useCRUDAudit` import from the page.
 
-### Low
-| # | Issue | Status |
-|---|-------|--------|
-| C7 | Outreach communications table had no pagination — added StandardPagination | ✅ Done |
+Affected handlers: `handleStatusChange`, `handlePriorityChange`, `handleAssignedToChange`, `handleDueDateChange`, `handleBulkComplete`, `handleBulkDelete`, `handleSave`, `handleDelete`.
 
-## User Constraints
-- No separate Leads or Meetings modules
-- Consistent Action Items terminology everywhere
+#### 2. Make stats badges clickable as filters
+
+**Files**: `src/components/settings/audit/AuditLogStats.tsx`, `src/components/settings/AuditLogsSettings.tsx`
+
+- Add callback props to `AuditLogStats`: `onFilterToday`, `onFilterThisWeek`, `onFilterAll`, `onFilterModule(moduleName)`.
+- Wrap each badge in a clickable button/element. When clicked:
+  - "Total" → clear all date/module filters (show all)
+  - "Today" → set date preset to today
+  - "This Week" → set date preset to this week
+  - Module badges (Action Items, Deals, Contacts, etc.) → set module filter to that module
+- Add visual active state to show which filter badge is currently selected.
+- Wire callbacks in `AuditLogsSettings.tsx`.
+
+#### 3. Fix summary text wrapping
+
+**File**: `src/components/settings/AuditLogsSettings.tsx`
+
+Change the Summary `TableCell` (line 323) from `truncate` to `break-words` / `whitespace-normal` so long summaries wrap within the cell instead of being clipped. Also set a `max-w` to keep it readable.
+
+```
+// Before
+<TableCell className="py-1.5 text-xs truncate">
+
+// After  
+<TableCell className="py-1.5 text-xs whitespace-normal break-words max-w-[500px]">
+```
+
+---
+
+### Technical Details
+
+- **Double-log root cause**: `useActionItems` hook already calls `logCreate/logUpdate/logDelete/logBulkUpdate/logBulkDelete` in each mutation's `onSuccess`. The page then calls the same audit functions again after `await updateActionItem(...)` returns.
+- **Stats badge wiring**: The parent `AuditLogsSettings` already holds `dateFrom`, `dateTo`, `moduleFilter` state. The callbacks will simply set those values using the existing `getDatePresets()` utility.
+- No schema or migration changes needed.
+
