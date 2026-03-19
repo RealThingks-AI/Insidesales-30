@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Download, Activity, Undo, Eye, RefreshCw } from "lucide-react";
+import { startOfDay, startOfWeek } from "date-fns";
 import { format } from "date-fns";
 import { RevertConfirmDialog } from "@/components/feeds/RevertConfirmDialog";
 import { StandardPagination } from "@/components/shared/StandardPagination";
