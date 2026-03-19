@@ -151,8 +151,8 @@ const AuditLogsSettings = () => {
   // Reset page on filter change
   useEffect(() => { setCurrentPage(1); }, [category, moduleFilter, searchTerm, dateFrom, dateTo]);
 
-  // Stats
-  const stats = useMemo(() => getStatsFromLogs(filteredLogs), [filteredLogs]);
+  // Stats always from full (unfiltered) logs so badges stay stable
+  const stats = useMemo(() => getStatsFromLogs(filterByCategory(logs, category)), [logs, category]);
 
   const getUserName = (userId: string) => userId ? (userNames[userId] || `User ${userId.substring(0, 8)}`) : 'System';
 
@@ -167,9 +167,8 @@ const AuditLogsSettings = () => {
   // Determine active stats filter badge
   const activeStatsFilter = useMemo(() => {
     if (moduleFilter !== 'all') {
-      // Find the display name for the current module filter
       const entry = Object.entries(moduleDisplayToFilter).find(([, v]) => v === moduleFilter);
-      return entry ? entry[0] : moduleFilter;
+      return entry ? entry[0].toLowerCase() : moduleFilter;
     }
     if (dateFrom && dateTo) {
       const today = startOfDay(new Date());
@@ -200,9 +199,12 @@ const AuditLogsSettings = () => {
   }, []);
 
   const handleFilterModule = useCallback((displayName: string) => {
-    const mapped = moduleDisplayToFilter[displayName];
+    // Case-insensitive lookup against the reverse map
+    const mapped = Object.entries(moduleDisplayToFilter).find(
+      ([key]) => key.toLowerCase() === displayName.toLowerCase()
+    );
     if (mapped) {
-      setModuleFilter(mapped);
+      setModuleFilter(mapped[1]);
       setDateFrom(undefined);
       setDateTo(undefined);
     }
