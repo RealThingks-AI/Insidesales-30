@@ -155,6 +155,58 @@ const AuditLogsSettings = () => {
   const stats = useMemo(() => getStatsFromLogs(filteredLogs), [filteredLogs]);
 
   const getUserName = (userId: string) => userId ? (userNames[userId] || `User ${userId.substring(0, 8)}`) : 'System';
+
+  // Reverse map display module name -> resource_type for filtering
+  const moduleDisplayToFilter: Record<string, ModuleFilter> = {
+    'Contacts': 'contacts', 'Deals': 'deals', 'Leads': 'leads',
+    'Action Items': 'action_items', 'Accounts': 'accounts',
+    'Deal Stakeholders': 'deal_stakeholders', 'Page Access': 'page_permissions',
+    'Email Templates': 'email_templates', 'Notifications': 'notification_preferences',
+  };
+
+  // Determine active stats filter badge
+  const activeStatsFilter = useMemo(() => {
+    if (moduleFilter !== 'all') {
+      // Find the display name for the current module filter
+      const entry = Object.entries(moduleDisplayToFilter).find(([, v]) => v === moduleFilter);
+      return entry ? entry[0] : moduleFilter;
+    }
+    if (dateFrom && dateTo) {
+      const today = startOfDay(new Date());
+      const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+      if (dateFrom.getTime() === today.getTime()) return 'today';
+      if (dateFrom.getTime() === weekStart.getTime()) return 'week';
+    }
+    if (!dateFrom && !dateTo && moduleFilter === 'all') return 'all';
+    return '';
+  }, [dateFrom, dateTo, moduleFilter]);
+
+  const handleFilterAll = useCallback(() => {
+    setDateFrom(undefined);
+    setDateTo(undefined);
+    setModuleFilter('all');
+  }, []);
+
+  const handleFilterToday = useCallback(() => {
+    setDateFrom(startOfDay(new Date()));
+    setDateTo(new Date());
+    setModuleFilter('all');
+  }, []);
+
+  const handleFilterThisWeek = useCallback(() => {
+    setDateFrom(startOfWeek(new Date(), { weekStartsOn: 1 }));
+    setDateTo(new Date());
+    setModuleFilter('all');
+  }, []);
+
+  const handleFilterModule = useCallback((displayName: string) => {
+    const mapped = moduleDisplayToFilter[displayName];
+    if (mapped) {
+      setModuleFilter(mapped);
+      setDateFrom(undefined);
+      setDateTo(undefined);
+    }
+  }, []);
   const getUserInitial = (userId: string) => {
     const name = getUserName(userId);
     return name.charAt(0).toUpperCase();
