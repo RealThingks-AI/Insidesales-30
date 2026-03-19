@@ -188,19 +188,8 @@ export default function ActionItems() {
         id: editingItem.id,
         ...data
       });
-      logUpdate('action_items', editingItem.id, data, {
-        title: editingItem.title,
-        status: editingItem.status,
-        priority: editingItem.priority,
-        assigned_to: editingItem.assigned_to,
-        due_date: editingItem.due_date,
-        description: editingItem.description,
-      });
     } else {
-      const result = await createActionItem(data);
-      if (result) {
-        logCreate('action_items', result.id || 'unknown', { title: data.title, status: data.status, priority: data.priority });
-      }
+      await createActionItem(data);
     }
     setEditingItem(null);
   };
