@@ -199,9 +199,7 @@ export default function ActionItems() {
   };
   const confirmDelete = async () => {
     if (itemToDelete) {
-      const item = actionItems.find(a => a.id === itemToDelete);
       await deleteActionItem(itemToDelete);
-      logDelete('action_items', itemToDelete, item ? { title: item.title, status: item.status, priority: item.priority } : undefined);
       setItemToDelete(null);
     }
     setDeleteDialogOpen(false);
