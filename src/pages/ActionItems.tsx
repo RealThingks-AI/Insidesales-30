@@ -244,7 +244,6 @@ export default function ActionItems() {
   };
   const handleBulkDelete = async () => {
     await bulkDelete(selectedIds);
-    logBulkDelete('action_items', selectedIds.length, selectedIds);
     setSelectedIds([]);
     setBulkDeleteDialogOpen(false);
   };
