@@ -223,9 +223,7 @@ export default function ActionItems() {
   };
   const handleAssignedToChange = async (id: string, userId: string | null) => {
     try {
-      const item = actionItems.find(a => a.id === id);
       await updateActionItem({ id, assigned_to: userId });
-      logUpdate('action_items', id, { assigned_to: userId }, { title: item?.title, assigned_to: item?.assigned_to });
     } catch (error) {
       console.error('Failed to update assignee:', error);
     }
