@@ -206,9 +206,7 @@ export default function ActionItems() {
   };
   const handleStatusChange = async (id: string, status: ActionItemStatus) => {
     try {
-      const item = actionItems.find(a => a.id === id);
       await updateActionItem({ id, status });
-      logUpdate('action_items', id, { status }, { title: item?.title, status: item?.status });
       if (status === 'Completed' && !filters.showArchived) {
         toast({ title: "Item completed", description: "Moved to the Completed view." });
       }
