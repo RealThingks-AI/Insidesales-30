@@ -200,9 +200,12 @@ const AuditLogsSettings = () => {
   }, []);
 
   const handleFilterModule = useCallback((displayName: string) => {
-    const mapped = moduleDisplayToFilter[displayName];
+    // Case-insensitive lookup against the reverse map
+    const mapped = Object.entries(moduleDisplayToFilter).find(
+      ([key]) => key.toLowerCase() === displayName.toLowerCase()
+    );
     if (mapped) {
-      setModuleFilter(mapped);
+      setModuleFilter(mapped[1]);
       setDateFrom(undefined);
       setDateTo(undefined);
     }
