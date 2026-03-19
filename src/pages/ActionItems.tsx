@@ -216,9 +216,7 @@ export default function ActionItems() {
   };
   const handlePriorityChange = async (id: string, priority: ActionItemPriority) => {
     try {
-      const item = actionItems.find(a => a.id === id);
       await updateActionItem({ id, priority });
-      logUpdate('action_items', id, { priority }, { title: item?.title, priority: item?.priority });
     } catch (error) {
       console.error('Failed to update priority:', error);
     }
