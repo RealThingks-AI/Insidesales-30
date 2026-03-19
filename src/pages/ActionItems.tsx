@@ -41,7 +41,7 @@ export default function ActionItems() {
     columnWidths,
     updateColumnWidth
   } = useActionItemColumnPreferences();
-  const { logCreate, logUpdate, logDelete, logBulkUpdate, logBulkDelete } = useCRUDAudit();
+  
 
   // URL params for highlight from notifications
   const [searchParams, setSearchParams] = useSearchParams();
