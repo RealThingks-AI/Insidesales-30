@@ -151,8 +151,8 @@ const AuditLogsSettings = () => {
   // Reset page on filter change
   useEffect(() => { setCurrentPage(1); }, [category, moduleFilter, searchTerm, dateFrom, dateTo]);
 
-  // Stats
-  const stats = useMemo(() => getStatsFromLogs(filteredLogs), [filteredLogs]);
+  // Stats always from full (unfiltered) logs so badges stay stable
+  const stats = useMemo(() => getStatsFromLogs(filterByCategory(logs, category)), [logs, category]);
 
   const getUserName = (userId: string) => userId ? (userNames[userId] || `User ${userId.substring(0, 8)}`) : 'System';
 
