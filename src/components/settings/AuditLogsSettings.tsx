@@ -167,9 +167,8 @@ const AuditLogsSettings = () => {
   // Determine active stats filter badge
   const activeStatsFilter = useMemo(() => {
     if (moduleFilter !== 'all') {
-      // Find the display name for the current module filter
       const entry = Object.entries(moduleDisplayToFilter).find(([, v]) => v === moduleFilter);
-      return entry ? entry[0] : moduleFilter;
+      return entry ? entry[0].toLowerCase() : moduleFilter;
     }
     if (dateFrom && dateTo) {
       const today = startOfDay(new Date());
