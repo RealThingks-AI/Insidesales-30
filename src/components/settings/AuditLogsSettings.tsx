@@ -378,7 +378,7 @@ const AuditLogsSettings = () => {
                           <TableCell className="py-1.5 text-xs">
                             {getModuleName(log)}
                           </TableCell>
-                          <TableCell className="py-1.5 text-xs truncate">
+                          <TableCell className="py-1.5 text-xs whitespace-normal break-words max-w-[500px]">
                             {summary}
                           </TableCell>
                           <TableCell className="py-1.5">
